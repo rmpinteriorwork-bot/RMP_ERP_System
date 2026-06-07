@@ -212,7 +212,10 @@ function loadModule(moduleName) {
                     <p style="color: var(--text-muted); margin-top: 10px;">Manage timelines, milestones, and site tracking here.</p>
                 </div>`;
             break;
-            
+         case 'backup':
+            pageTitle.innerText = "Data Backup & Restore";
+            loadBackupModule();
+            return; // இது முக்கியம்   
         default:
             // மற்ற அனைத்து மாட்யூல்களுக்கான பொதுவான தற்காலிகப் பக்கம்
             let formattedName = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
@@ -253,3 +256,99 @@ async function updateDashboardData() {
 window.onload = () => {
     loadModule('dashboard');
 };
+
+// --- Step 5: Backup & Restore Module ---
+
+function loadBackupModule() {
+    const backupContent = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+                <i class="fas fa-cloud-download-alt" style="font-size: 3rem; color: var(--accent-color); margin-bottom: 15px;"></i>
+                <h3 style="margin-bottom: 10px;">Backup Database</h3>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Download all your business data (Leads, Projects, Finances) securely to your computer.</p>
+                <button onclick="exportDatabase()" style="background: var(--primary-color); color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: 500; transition: background 0.3s;">
+                    <i class="fas fa-download"></i> Download Full Backup (JSON)
+                </button>
+            </div>
+
+            <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+                <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 15px;"></i>
+                <h3 style="margin-bottom: 10px;">Restore Database</h3>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Upload a previously saved JSON backup file to restore your system data.</p>
+                <input type="file" id="restoreFileInput" accept=".json" style="display: none;" onchange="importDatabase(event)">
+                <button onclick="document.getElementById('restoreFileInput').click()" style="background: var(--secondary-color); color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: 500; transition: background 0.3s;">
+                    <i class="fas fa-upload"></i> Select Backup File
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('moduleContainer').innerHTML = backupContent;
+}
+
+// 1. Export (Download Backup)
+function exportDatabase() {
+    try {
+        const dbData = localStorage.getItem('RMP_ERP_SYSTEM_DB');
+        if (!dbData) {
+            alert("No data found to backup!");
+            return;
+        }
+
+        const blob = new Blob([dbData], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        
+        // கோப்பிற்கான பெயர்: RMP_Backup_தேதி
+        const date = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = \`RMP_ERP_Backup_\${date}.json\`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert("Backup Downloaded Successfully! Please keep this file safe.");
+    } catch (error) {
+        console.error("Backup Failed:", error);
+        alert("Error creating backup. Please try again.");
+    }
+}
+
+// 2. Import (Restore Backup)
+function importDatabase(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // உறுதி செய்தல்
+    if (!confirm("WARNING: Restoring will overwrite all current data. Do you want to proceed?")) {
+        event.target.value = ''; // Reset input
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            
+            // சிறிய அளவிலான சரிபார்ப்பு (பழைய டேட்டாவா என்பதை உறுதி செய்ய)
+            if (importedData && typeof importedData === 'object' && 'settings' in importedData) {
+                localStorage.setItem('RMP_ERP_SYSTEM_DB', JSON.stringify(importedData));
+                alert("Database Restored Successfully! The page will now reload.");
+                window.location.reload(); // மாற்றங்கள் உடனடியாகத் தெரிய பக்கத்தை ரீலோட் செய்தல்
+            } else {
+                alert("Invalid Backup File! Please upload a valid RMP ERP backup JSON file.");
+            }
+        } catch (error) {
+            console.error("Restore Failed:", error);
+            alert("Error reading file. The file might be corrupted.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+// பழைய loadModule ஃபங்ஷனில் Backup பகுதியை இணைக்க வேண்டும்
+// (app.js-ல் நீங்கள் ஏற்கனவே உள்ள loadModule ஃபங்ஷனைத் தேடி, அதில் switch(moduleName) பகுதிக்குள் இதைச் சேர்க்கவும்)
