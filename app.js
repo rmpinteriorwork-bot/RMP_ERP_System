@@ -144,7 +144,10 @@ function loadModule(moduleName) {
             pageTitle.innerText = "Project Management";
             loadProjectsModule();
             return;
-            
+     case 'expenses':
+            pageTitle.innerText = "Expense Management";
+            loadExpensesModule();
+            return;   
         case 'backup':
             pageTitle.innerText = "Data Backup & Restore";
             loadBackupModule();
@@ -167,13 +170,18 @@ async function updateDashboardData() {
     try {
         const leads = await db.getCollection('leads');
         const projects = await db.getCollection('projects');
+        const expenses = await db.getCollection('expenses');
+        
         document.getElementById('dash-leads').innerText = leads.length;
         document.getElementById('dash-projects').innerText = projects.length;
+        
+        // மொத்த செலவுகளைக் கணக்கிடுதல்
+        const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+        document.getElementById('dash-expenses').innerText = "₹" + totalExpenses.toLocaleString('en-IN');
     } catch(err) {
         console.log("Error loading dashboard data:", err);
     }
 }
-
 window.onload = () => {
     loadModule('dashboard');
 };
@@ -475,6 +483,149 @@ async function deleteLead(id) {
     if(confirm('Are you sure you want to delete this lead?')) {
         await db.deleteRecord('leads', id);
         displayLeads();
+        if(typeof updateDashboardData === 'function') updateDashboardData();
+    }
+}
+
+// --- Step 8: Expense Management Module ---
+
+async function loadExpensesModule() {
+    // Dropdown-ல் காட்டுவதற்காக Projects டேட்டாவை எடுத்தல்
+    const projects = await db.getCollection('projects');
+    let projectOptions = '<option value="">General / No Project Selected</option>';
+    projects.forEach(p => {
+        projectOptions += `<option value="${p.id}">${p.name} - ${p.client}</option>`;
+    });
+
+    const content = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Expense Tracking</h3>
+            <button onclick="showExpenseModal()" style="background: var(--secondary-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 500;"><i class="fas fa-plus"></i> Add Expense</button>
+        </div>
+        
+        <div style="background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); overflow-x: auto; box-shadow: var(--shadow);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Date</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Category</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Description</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Amount (₹)</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="expensesTableBody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="expenseModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: var(--card-bg); padding: 30px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <h3 style="margin-bottom: 20px; color: var(--text-main);">Add New Expense</h3>
+                <form id="expenseForm" onsubmit="saveExpense(event)">
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Date</label>
+                            <input type="date" id="expDate" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Category</label>
+                            <select id="expCategory" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                                <option value="Material">Material (பொருட்கள்)</option>
+                                <option value="Labour">Labour (கூலி)</option>
+                                <option value="Transport">Transport (போக்குவரத்து)</option>
+                                <option value="Miscellaneous">Miscellaneous (இதர)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Link to Project (Optional)</label>
+                        <select id="expProject" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                            ${projectOptions}
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Description (e.g. Plywood, Carpenter advance)</label>
+                        <input type="text" id="expDesc" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Amount (₹)</label>
+                        <input type="number" id="expAmount" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="closeExpenseModal()" style="padding: 10px 15px; border-radius: 5px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer;">Cancel</button>
+                        <button type="submit" style="background: var(--secondary-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Save Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('moduleContainer').innerHTML = content;
+    
+    // இன்றையை தேதியை Default ஆக செட் செய்ய
+    document.getElementById('expDate').valueAsDate = new Date();
+    
+    displayExpenses();
+}
+
+async function displayExpenses() {
+    const expenses = await db.getCollection('expenses');
+    const tbody = document.getElementById('expensesTableBody');
+    
+    if(expenses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted);">No expenses recorded yet.</td></tr>';
+        return;
+    }
+
+    // Category-க்கு ஏற்ற நிறங்கள்
+    const catColors = {
+        'Material': '#3498db',
+        'Labour': '#e67e22',
+        'Transport': '#9b59b6',
+        'Miscellaneous': '#e74c3c'
+    };
+
+    tbody.innerHTML = expenses.map(e => `
+        <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.3s;">
+            <td style="padding: 15px; color: var(--text-main);">${e.date}</td>
+            <td style="padding: 15px;"><span style="background: ${catColors[e.category]}20; color: ${catColors[e.category]}; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 600;">${e.category}</span></td>
+            <td style="padding: 15px; color: var(--text-main);">${e.description}</td>
+            <td style="padding: 15px; color: var(--text-main); font-weight: 600;">₹${Number(e.amount).toLocaleString('en-IN')}</td>
+            <td style="padding: 15px;">
+                <button onclick="deleteExpense('${e.id}')" style="color: var(--secondary-color); background: none; border: none; cursor: pointer; font-size: 1rem;"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        </tr>
+    `).reverse().join('');
+}
+
+function showExpenseModal() { document.getElementById('expenseModal').style.display = 'flex'; }
+function closeExpenseModal() { 
+    document.getElementById('expenseModal').style.display = 'none'; 
+    document.getElementById('expenseForm').reset(); 
+    document.getElementById('expDate').valueAsDate = new Date();
+}
+
+async function saveExpense(event) {
+    event.preventDefault();
+    const newExpense = {
+        date: document.getElementById('expDate').value,
+        category: document.getElementById('expCategory').value,
+        projectId: document.getElementById('expProject').value,
+        description: document.getElementById('expDesc').value,
+        amount: document.getElementById('expAmount').value
+    };
+    
+    await db.addRecord('expenses', newExpense);
+    closeExpenseModal();
+    displayExpenses();
+    if(typeof updateDashboardData === 'function') updateDashboardData();
+}
+
+async function deleteExpense(id) {
+    if(confirm('Are you sure you want to delete this expense?')) {
+        await db.deleteRecord('expenses', id);
+        displayExpenses();
         if(typeof updateDashboardData === 'function') updateDashboardData();
     }
 }
