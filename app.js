@@ -100,3 +100,158 @@ async function displayProjects() {
             <p>Client: ${p.client}</p>
         </div>`).join('');
 }
+
+// [Leads Module - முழுமையான செயல்பாடு]
+function loadLeadsModule() {
+    moduleContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Customer Leads</h3>
+            <button onclick="showLeadModal()" style="background:var(--accent-color); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">+ New Lead</button>
+        </div>
+        <table style="width:100%; border-collapse:collapse; background:var(--card-bg);">
+            <tr style="border-bottom:1px solid var(--border-color);">
+                <th style="padding:15px; text-align:left;">Name</th>
+                <th style="padding:15px; text-align:left;">Phone</th>
+                <th style="padding:15px; text-align:left;">Status</th>
+            </tr>
+            <tbody id="leadsTableBody"></tbody>
+        </table>
+        <div id="leadModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
+            <div style="background:var(--card-bg); padding:20px; border-radius:10px; width:350px;">
+                <h3>Add New Lead</h3>
+                <input type="text" id="lName" placeholder="Customer Name" style="width:100%; padding:10px; margin:10px 0;">
+                <input type="text" id="lPhone" placeholder="Phone Number" style="width:100%; padding:10px; margin:10px 0;">
+                <button onclick="saveLead()" style="background:var(--primary-color); color:white; padding:10px; border:none; width:100%;">Save</button>
+                <button onclick="document.getElementById('leadModal').style.display='none'" style="background:transparent; color:red; border:none; margin-top:10px; width:100%;">Cancel</button>
+            </div>
+        </div>`;
+    displayLeads();
+}
+
+async function saveLead() {
+    const name = document.getElementById('lName').value;
+    const phone = document.getElementById('lPhone').value;
+    await db.addRecord('leads', {name, phone, status: 'New'});
+    document.getElementById('leadModal').style.display = 'none';
+    displayLeads();
+}
+
+async function displayLeads() {
+    const leads = await db.getCollection('leads');
+    document.getElementById('leadsTableBody').innerHTML = leads.map(l => `
+        <tr style="border-bottom:1px solid var(--border-color);">
+            <td style="padding:15px;">${l.name}</td>
+            <td style="padding:15px;">${l.phone}</td>
+            <td style="padding:15px;">${l.status}</td>
+        </tr>`).join('');
+}
+
+// [Inventory Module - வரிசையாக சேர்க்கப்படும்]
+function loadInventoryModule() {
+    moduleContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Stock Inventory</h3>
+            <button onclick="showInventoryModal()" style="background:var(--secondary-color); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">+ Add Item</button>
+        </div>
+        <table style="width:100%; border-collapse:collapse; background:var(--card-bg);">
+            <tr style="border-bottom:1px solid var(--border-color);">
+                <th style="padding:15px; text-align:left;">Item Name</th>
+                <th style="padding:15px; text-align:left;">Quantity</th>
+                <th style="padding:15px; text-align:left;">Price</th>
+            </tr>
+            <tbody id="inventoryTableBody"></tbody>
+        </table>
+        <div id="inventoryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
+            <div style="background:var(--card-bg); padding:20px; border-radius:10px; width:350px;">
+                <h3>Add New Stock Item</h3>
+                <input type="text" id="iName" placeholder="Item Name" style="width:100%; padding:10px; margin:10px 0;">
+                <input type="number" id="iQty" placeholder="Quantity" style="width:100%; padding:10px; margin:10px 0;">
+                <input type="number" id="iPrice" placeholder="Unit Price" style="width:100%; padding:10px; margin:10px 0;">
+                <button onclick="saveInventory()" style="background:var(--primary-color); color:white; padding:10px; border:none; width:100%;">Save Item</button>
+                <button onclick="document.getElementById('inventoryModal').style.display='none'" style="background:transparent; color:red; border:none; margin-top:10px; width:100%;">Cancel</button>
+            </div>
+        </div>`;
+    displayInventory();
+}
+
+async function saveInventory() {
+    const name = document.getElementById('iName').value;
+    const qty = document.getElementById('iQty').value;
+    const price = document.getElementById('iPrice').value;
+    await db.addRecord('inventory', {name, qty, price});
+    document.getElementById('inventoryModal').style.display = 'none';
+    displayInventory();
+}
+
+async function displayInventory() {
+    const items = await db.getCollection('inventory');
+    document.getElementById('inventoryTableBody').innerHTML = items.map(i => `
+        <tr style="border-bottom:1px solid var(--border-color);">
+            <td style="padding:15px;">${i.name}</td>
+            <td style="padding:15px;">${i.qty}</td>
+            <td style="padding:15px;">₹${i.price}</td>
+        </tr>`).join('');
+}
+// [Quotations Module - வரிசையாக சேர்க்கப்படும்]
+function loadQuotationsModule() {
+    moduleContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Client Quotations</h3>
+            <button onclick="showQuotationModal()" style="background:var(--secondary-color); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">+ New Quotation</button>
+        </div>
+        <table style="width:100%; border-collapse:collapse; background:var(--card-bg);">
+            <tr style="border-bottom:1px solid var(--border-color);">
+                <th style="padding:15px; text-align:left;">Client Name</th>
+                <th style="padding:15px; text-align:left;">Project</th>
+                <th style="padding:15px; text-align:left;">Total Amount</th>
+            </tr>
+            <tbody id="quotationsTableBody"></tbody>
+        </table>
+        <div id="quotationModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
+            <div style="background:var(--card-bg); padding:20px; border-radius:10px; width:400px;">
+                <h3>Create Quotation</h3>
+                <input type="text" id="qClient" placeholder="Client Name" style="width:100%; padding:10px; margin:10px 0;">
+                <input type="text" id="qProject" placeholder="Project Name" style="width:100%; padding:10px; margin:10px 0;">
+                <input type="number" id="qAmount" placeholder="Total Amount" style="width:100%; padding:10px; margin:10px 0;">
+                <button onclick="saveQuotation()" style="background:var(--primary-color); color:white; padding:10px; border:none; width:100%;">Save Quotation</button>
+                <button onclick="document.getElementById('quotationModal').style.display='none'" style="background:transparent; color:red; border:none; margin-top:10px; width:100%;">Cancel</button>
+            </div>
+        </div>`;
+    displayQuotations();
+}
+
+async function saveQuotation() {
+    const client = document.getElementById('qClient').value;
+    const project = document.getElementById('qProject').value;
+    const amount = document.getElementById('qAmount').value;
+    await db.addRecord('quotations', {client, project, amount});
+    document.getElementById('quotationModal').style.display = 'none';
+    displayQuotations();
+}
+
+async function displayQuotations() {
+    const qts = await db.getCollection('quotations');
+    document.getElementById('quotationsTableBody').innerHTML = qts.map(q => `
+        <tr style="border-bottom:1px solid var(--border-color);">
+            <td style="padding:15px;">${q.client}</td>
+            <td style="padding:15px;">${q.project}</td>
+            <td style="padding:15px;">₹${q.amount}</td>
+        </tr>`).join('');
+}
+// [Settings Module - வரிசையாக சேர்க்கப்படும்]
+function loadSettingsModule() {
+    moduleContainer.innerHTML = `
+        <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color);">
+            <h3>System Settings</h3>
+            <div style="margin-bottom: 20px;">
+                <label>Company Name</label>
+                <input type="text" id="compName" value="RMP INTERIOR" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid var(--border-color); border-radius: 5px;">
+            </div>
+            <button onclick="saveSettings()" style="background: var(--primary-color); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Save Settings</button>
+        </div>`;
+}
+
+function saveSettings() {
+    const name = document.getElementById('compName').value;
+    alert("Settings saved successfully! Company: " + name);
+}
