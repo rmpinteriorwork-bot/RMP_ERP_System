@@ -129,25 +129,91 @@ async function displayLeads() {
 }
 
 // --- 5. PROJECTS MODULE ---
+// --- 5. REAL INTERIOR PROJECTS MODULE ---
 function loadProjectsModule() {
     pageTitle.innerText = "PROJECTS MANAGEMENT";
     moduleContainer.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-            <h3>Ongoing Projects</h3>
-            <button onclick="document.getElementById('projModal').style.display='flex'" style="background:var(--accent-color); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">+ Add Project</button>
+            <h3>Active Sites & Projects</h3>
+            <button onclick="document.getElementById('projModal').style.display='flex'" style="background:var(--accent-color); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">+ New Project</button>
         </div>
-        <div id="projGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px;"></div>
+        <div id="projGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(350px, 1fr)); gap:20px;"></div>
+
         <div id="projModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:1000;">
-            <div style="background:var(--card-bg); padding:20px; border-radius:10px; width:350px;">
-                <h3>New Project</h3>
-                <input type="text" id="pName" placeholder="Project Name" style="width:100%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
-                <input type="text" id="pClient" placeholder="Client Name" style="width:100%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
-                <input type="number" id="pBudget" placeholder="Budget (₹)" style="width:100%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
-                <button onclick="saveProject()" style="width:100%; padding:10px; background:var(--primary-color); color:white; border:none; border-radius:5px;">Save</button>
+            <div style="background:var(--card-bg); padding:20px; border-radius:10px; width:400px; max-height:80vh; overflow-y:auto;">
+                <h3>Start New Project</h3>
+                <input type="text" id="pName" placeholder="Project Name (e.g., Mr. Kumar Villa)" style="width:100%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
+                <input type="text" id="pClient" placeholder="Client Name & Phone" style="width:100%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
+                
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="pBudget" placeholder="Total Value (₹)" style="width:50%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
+                    <input type="number" id="pAdvance" placeholder="Advance Received (₹)" style="width:50%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
+                </div>
+
+                <select id="pStatus" style="width:100%; padding:10px; margin:10px 0; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
+                    <option value="Design Phase">Design Phase</option>
+                    <option value="Material Procurement">Material Procurement</option>
+                    <option value="Carpentry Work">Carpentry Work Ongoing</option>
+                    <option value="Finishing Phase">Finishing & Painting</option>
+                    <option value="Handover Ready">Ready for Handover</option>
+                </select>
+                
+                <label style="font-size:0.8rem; color:var(--text-muted);">Work Completion Percentage (%)</label>
+                <input type="number" id="pProgress" placeholder="e.g., 50" max="100" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-main);">
+
+                <button onclick="saveProject()" style="width:100%; padding:10px; background:var(--primary-color); color:white; border:none; border-radius:5px; margin-top:10px;">Save Project</button>
                 <button onclick="document.getElementById('projModal').style.display='none'" style="width:100%; padding:10px; background:transparent; color:red; border:none; margin-top:5px;">Cancel</button>
             </div>
         </div>`;
     displayProjects();
+}
+
+async function saveProject() {
+    await db.addRecord('projects', { 
+        name: document.getElementById('pName').value, 
+        client: document.getElementById('pClient').value, 
+        budget: document.getElementById('pBudget').value || 0,
+        advance: document.getElementById('pAdvance').value || 0,
+        status: document.getElementById('pStatus').value,
+        progress: document.getElementById('pProgress').value || 0
+    });
+    document.getElementById('projModal').style.display='none'; 
+    displayProjects();
+}
+
+async function displayProjects() {
+    const data = await db.getCollection('projects');
+    document.getElementById('projGrid').innerHTML = data.length ? data.map(d => {
+        const balance = Number(d.budget) - Number(d.advance);
+        return `
+        <div style="background:var(--card-bg); padding:20px; border-radius:10px; border:1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <h4 style="color:var(--primary-color); margin:0; font-size:1.2rem;">${d.name}</h4>
+                <span style="background:var(--bg-color); padding:5px 10px; border-radius:15px; font-size:0.8rem; border:1px solid var(--accent-color);">${d.status}</span>
+            </div>
+            <p style="color:var(--text-muted); margin:10px 0; font-size:0.9rem;"><i class="fas fa-user"></i> ${d.client}</p>
+            
+            <div style="margin: 15px 0;">
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;">
+                    <span>Site Progress</span>
+                    <span>${d.progress}%</span>
+                </div>
+                <div style="width:100%; background:var(--bg-color); border-radius:5px; height:8px; overflow:hidden;">
+                    <div style="width:${d.progress}%; background:var(--accent-color); height:100%;"></div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-color); padding:10px; border-radius:5px; font-size:0.9rem; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Project Value:</span> <strong>₹${Number(d.budget).toLocaleString('en-IN')}</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; color:green;"><span>Advance Received:</span> <strong>₹${Number(d.advance).toLocaleString('en-IN')}</strong></div>
+                <div style="display:flex; justify-content:space-between; color:red; border-top:1px solid var(--border-color); padding-top:5px; margin-top:5px;"><span>Balance Pending:</span> <strong>₹${balance.toLocaleString('en-IN')}</strong></div>
+            </div>
+
+            <div style="text-align:right;">
+                <button onclick="deleteData('projects','${d.id}', displayProjects)" style="color:red; background:none; border:none; cursor:pointer; font-size:0.9rem;"><i class="fas fa-trash"></i> Delete Project</button>
+            </div>
+        </div>`;
+    }).reverse().join('') : `<p>No active projects found.</p>`;
 }
 async function saveProject() {
     await db.addRecord('projects', { name: document.getElementById('pName').value, client: document.getElementById('pClient').value, budget: document.getElementById('pBudget').value });
