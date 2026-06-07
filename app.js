@@ -204,14 +204,10 @@ function loadModule(moduleName) {
                 </div>`;
             break;
             
-        case 'projects':
+    case 'projects':
             pageTitle.innerText = "Project Management";
-            content = `
-                <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color);">
-                    <h3>Modular Kitchen & Interior Projects</h3>
-                    <p style="color: var(--text-muted); margin-top: 10px;">Manage timelines, milestones, and site tracking here.</p>
-                </div>`;
-            break;
+            loadProjectsModule();
+            return;
          case 'backup':
             pageTitle.innerText = "Data Backup & Restore";
             loadBackupModule();
@@ -352,3 +348,116 @@ function importDatabase(event) {
 
 // பழைய loadModule ஃபங்ஷனில் Backup பகுதியை இணைக்க வேண்டும்
 // (app.js-ல் நீங்கள் ஏற்கனவே உள்ள loadModule ஃபங்ஷனைத் தேடி, அதில் switch(moduleName) பகுதிக்குள் இதைச் சேர்க்கவும்)
+// --- Step 6: Project Management Module ---
+
+function loadProjectsModule() {
+    const content = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Ongoing & Upcoming Projects</h3>
+            <button onclick="showProjectModal()" style="background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 500; transition: 0.3s;"><i class="fas fa-plus"></i> Add New Project</button>
+        </div>
+        
+        <div id="projectsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            </div>
+
+        <div id="projectModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: var(--card-bg); padding: 30px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <h3 style="margin-bottom: 20px; color: var(--text-main);">Create New Project</h3>
+                <form id="projectForm" onsubmit="saveProject(event)">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Project Name (e.g. 3BHK Modular Kitchen)</label>
+                        <input type="text" id="projName" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Client Name</label>
+                        <input type="text" id="projClient" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Start Date</label>
+                            <input type="date" id="projDate" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Budget (₹)</label>
+                            <input type="number" id="projBudget" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="closeProjectModal()" style="padding: 10px 15px; border-radius: 5px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer;">Cancel</button>
+                        <button type="submit" style="background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Save Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('moduleContainer').innerHTML = content;
+    displayProjects(); // டேட்டாபேஸில் உள்ள ப்ராஜெக்ட்களை திரையில் காட்ட
+}
+
+// Database-ல் இருந்து ப்ராஜெக்ட்களை எடுத்து திரையில் காட்டுதல்
+async function displayProjects() {
+    const projects = await db.getCollection('projects');
+    const grid = document.getElementById('projectsGrid');
+    
+    if(projects.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color);"><i class="fas fa-folder-open" style="font-size: 3rem; color: var(--border-color); margin-bottom: 15px;"></i><p style="color: var(--text-muted);">No active projects found. Click "Add New Project" to start.</p></div>';
+        return;
+    }
+
+    // புதிய ப்ராஜெக்ட் முதலில் வரும்படி (reverse) காட்டும் குறியீடு
+    grid.innerHTML = projects.map(p => `
+        <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: var(--shadow); transition: transform 0.2s;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <div>
+                    <h4 style="color: var(--text-main); font-size: 1.1rem; margin-bottom: 5px;">${p.name}</h4>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;"><i class="fas fa-user" style="margin-right: 5px;"></i> ${p.client}</p>
+                </div>
+                <span style="background: rgba(52, 152, 219, 0.1); color: var(--accent-color); padding: 5px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: 600;">In Progress</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 15px; color: var(--text-main); background: var(--bg-color); padding: 10px; border-radius: 5px;">
+                <span><i class="far fa-calendar-alt" style="color: var(--text-muted);"></i> ${p.startDate}</span>
+                <span style="font-weight: 600;"><i class="fas fa-rupee-sign" style="color: var(--text-muted);"></i> ${Number(p.budget).toLocaleString('en-IN')}</span>
+            </div>
+            <div style="border-top: 1px solid var(--border-color); padding-top: 15px; display: flex; justify-content: space-between;">
+                 <button onclick="alert('Task management coming soon!')" style="color: var(--accent-color); background: none; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 500;"><i class="fas fa-tasks"></i> Tasks</button>
+                 <button onclick="deleteProject('${p.id}')" style="color: var(--secondary-color); background: none; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 500;"><i class="fas fa-trash-alt"></i> Delete</button>
+            </div>
+        </div>
+    `).reverse().join('');
+}
+
+// Modal (Popup) திறக்க மற்றும் மூட
+function showProjectModal() { document.getElementById('projectModal').style.display = 'flex'; }
+function closeProjectModal() { 
+    document.getElementById('projectModal').style.display = 'none'; 
+    document.getElementById('projectForm').reset(); 
+}
+
+// புதிய ப்ராஜெக்ட்டை Database-ல் சேமித்தல்
+async function saveProject(event) {
+    event.preventDefault();
+    const newProject = {
+        name: document.getElementById('projName').value,
+        client: document.getElementById('projClient').value,
+        startDate: document.getElementById('projDate').value,
+        budget: document.getElementById('projBudget').value,
+        status: 'In Progress'
+    };
+    
+    await db.addRecord('projects', newProject);
+    closeProjectModal();
+    displayProjects();
+    
+    // Dashboard டேட்டாவை அப்டேட் செய்ய
+    if(typeof updateDashboardData === 'function') updateDashboardData();
+}
+
+// ப்ராஜெக்ட்டை அழித்தல்
+async function deleteProject(id) {
+    if(confirm('Are you sure you want to delete this project?')) {
+        await db.deleteRecord('projects', id);
+        displayProjects();
+        if(typeof updateDashboardData === 'function') updateDashboardData();
+    }
+}
