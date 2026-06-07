@@ -136,19 +136,10 @@ function loadModule(moduleName) {
             updateDashboardData();
             break;
             
-        case 'leads':
+       case 'leads':
             pageTitle.innerText = "Lead Management (CRM)";
-            content = `
-                <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3>Lead Tracking</h3>
-                        <button style="background: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;"><i class="fas fa-plus"></i> Add New Lead</button>
-                    </div>
-                    <p style="color: var(--text-muted);">Lead Database structure is ready. UI implementation is in progress.</p>
-                </div>`;
-            moduleContainer.innerHTML = content;
-            break;
-            
+            loadLeadsModule();
+            return;  
         case 'projects':
             pageTitle.innerText = "Project Management";
             loadProjectsModule();
@@ -348,5 +339,142 @@ async function deleteProject(id) {
         await db.deleteRecord('projects', id);
         displayProjects();
         updateDashboardData();
+    }
+}
+// --- Step 7: Lead Management (CRM) Module ---
+
+function loadLeadsModule() {
+    const content = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Lead Tracking Pipeline</h3>
+            <button onclick="showLeadModal()" style="background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 500;"><i class="fas fa-plus"></i> Add New Lead</button>
+        </div>
+        
+        <div style="background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); overflow-x: auto; box-shadow: var(--shadow);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Date</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Name</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Phone</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Requirement</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Status</th>
+                        <th style="padding: 15px; color: var(--text-muted); font-weight: 500;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="leadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
+            <div style="background: var(--card-bg); padding: 30px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <h3 style="margin-bottom: 20px; color: var(--text-main);">Add New Lead</h3>
+                <form id="leadForm" onsubmit="saveLead(event)">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Customer Name</label>
+                        <input type="text" id="leadName" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Phone Number</label>
+                        <input type="tel" id="leadPhone" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Requirement (e.g. Modular Kitchen, Wardrobe)</label>
+                        <input type="text" id="leadReq" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted);">Initial Status</label>
+                        <select id="leadStatus" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-main);">
+                            <option value="New Inquiry">New Inquiry</option>
+                            <option value="Site Visit Planned">Site Visit Planned</option>
+                            <option value="Quotation Sent">Quotation Sent</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="closeLeadModal()" style="padding: 10px 15px; border-radius: 5px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer;">Cancel</button>
+                        <button type="submit" style="background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Save Lead</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('moduleContainer').innerHTML = content;
+    displayLeads();
+}
+
+async function displayLeads() {
+    const leads = await db.getCollection('leads');
+    const tbody = document.getElementById('leadsTableBody');
+    
+    if(leads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">No leads found. Click "Add New Lead" to get started.</td></tr>';
+        return;
+    }
+
+    // Status-க்கு ஏற்ற நிறங்கள்
+    const statusColors = {
+        'New Inquiry': '#e74c3c',
+        'Site Visit Planned': '#f39c12',
+        'Quotation Sent': '#3498db',
+        'Converted': '#2ecc71',
+        'Lost': '#95a5a6'
+    };
+
+    tbody.innerHTML = leads.map(l => `
+        <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.3s;">
+            <td style="padding: 15px; color: var(--text-main);">${new Date(l.createdAt).toLocaleDateString('en-IN')}</td>
+            <td style="padding: 15px; color: var(--text-main); font-weight: 500;">${l.name}</td>
+            <td style="padding: 15px; color: var(--text-main);">${l.phone}</td>
+            <td style="padding: 15px; color: var(--text-main);">${l.requirement}</td>
+            <td style="padding: 15px;">
+                <select onchange="updateLeadStatus('${l.id}', this.value)" style="padding: 5px 10px; border-radius: 15px; border: 1px solid ${statusColors[l.status]}; color: ${statusColors[l.status]}; background: transparent; font-weight: 600; cursor: pointer; outline: none;">
+                    <option value="New Inquiry" ${l.status === 'New Inquiry' ? 'selected' : ''}>New Inquiry</option>
+                    <option value="Site Visit Planned" ${l.status === 'Site Visit Planned' ? 'selected' : ''}>Site Visit Planned</option>
+                    <option value="Quotation Sent" ${l.status === 'Quotation Sent' ? 'selected' : ''}>Quotation Sent</option>
+                    <option value="Converted" ${l.status === 'Converted' ? 'selected' : ''}>Converted</option>
+                    <option value="Lost" ${l.status === 'Lost' ? 'selected' : ''}>Lost</option>
+                </select>
+            </td>
+            <td style="padding: 15px;">
+                <button onclick="deleteLead('${l.id}')" style="color: var(--secondary-color); background: none; border: none; cursor: pointer; font-size: 1rem;"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        </tr>
+    `).reverse().join('');
+}
+
+function showLeadModal() { document.getElementById('leadModal').style.display = 'flex'; }
+function closeLeadModal() { 
+    document.getElementById('leadModal').style.display = 'none'; 
+    document.getElementById('leadForm').reset(); 
+}
+
+async function saveLead(event) {
+    event.preventDefault();
+    const newLead = {
+        name: document.getElementById('leadName').value,
+        phone: document.getElementById('leadPhone').value,
+        requirement: document.getElementById('leadReq').value,
+        status: document.getElementById('leadStatus').value
+    };
+    
+    await db.addRecord('leads', newLead);
+    closeLeadModal();
+    displayLeads();
+    if(typeof updateDashboardData === 'function') updateDashboardData();
+}
+
+// ஸ்டேட்டஸ் மாறும்போது (உதாரணமாக Dropdown-ல் Converted என மாற்றினால்) Database-ல் அப்டேட் செய்யும் வசதி
+async function updateLeadStatus(id, newStatus) {
+    await db.updateRecord('leads', id, { status: newStatus });
+    displayLeads();
+}
+
+async function deleteLead(id) {
+    if(confirm('Are you sure you want to delete this lead?')) {
+        await db.deleteRecord('leads', id);
+        displayLeads();
+        if(typeof updateDashboardData === 'function') updateDashboardData();
     }
 }
