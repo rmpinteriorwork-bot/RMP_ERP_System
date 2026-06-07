@@ -124,3 +124,132 @@ const db = new RMPDatabase();
 db.addRecord('leads', { name: "New Client", phone: "9876543210", status: "New" }).then(console.log);
 db.getCollection('leads').then(console.log);
 */
+
+// --- Step 4: UI & Navigation Logic ---
+
+// DOM Elements (HTML-ல் உள்ள பகுதிகளை JavaScript-உடன் இணைத்தல்)
+const sidebar = document.getElementById('sidebar');
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const themeToggle = document.getElementById('themeToggle');
+const moduleContainer = document.getElementById('moduleContainer');
+const pageTitle = document.getElementById('pageTitle');
+const navItems = document.querySelectorAll('.nav-item');
+
+// 1. Mobile Menu Toggle (மொபைலில் மெனுவை திறக்க/மூட)
+mobileMenuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('active');
+});
+
+// 2. Dark Mode Toggle (டார்க் மோடு வசதி)
+// ஏற்கனவே செலக்ட் செய்த தீம் உள்ளதா எனச் சரிபார்க்க
+if(localStorage.getItem('rmp_theme') === 'dark') {
+    document.body.classList.add('dark-mode');
+    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+}
+
+themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    if(document.body.classList.contains('dark-mode')) {
+        localStorage.setItem('rmp_theme', 'dark'); // செட்டிங்கை சேவ் செய்ய
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    } else {
+        localStorage.setItem('rmp_theme', 'light');
+        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+    }
+});
+
+// 3. Dynamic Module Loader (ஒவ்வொரு மெனுவிற்கும் ஏற்ற பக்கத்தை லோட் செய்ய)
+function loadModule(moduleName) {
+    // Sidebar-ல் எந்த மெனு ஆக்டிவாக உள்ளது என மாற்றுதல்
+    navItems.forEach(item => {
+        item.classList.remove('active');
+        if(item.getAttribute('onclick').includes(moduleName)) {
+            item.classList.add('active');
+        }
+    });
+
+    // மொபைலில் ஏதேனும் ஒரு மெனுவை க்ளிக் செய்தவுடன் Sidebar-ஐ மூடுதல்
+    if(window.innerWidth <= 768) {
+        sidebar.classList.remove('active');
+    }
+
+    // பக்கங்களுக்கான உள்ளடக்கம் (Module Content)
+    let content = '';
+    switch(moduleName) {
+        case 'dashboard':
+            pageTitle.innerText = "Executive Dashboard";
+            content = `
+                <div class="dashboard-cards">
+                    <div class="card"><i class="fas fa-bullseye"></i> <div class="card-info"><h3>Total Leads</h3> <p id="dash-leads">0</p></div></div>
+                    <div class="card"><i class="fas fa-project-diagram"></i> <div class="card-info"><h3>Active Projects</h3> <p id="dash-projects">0</p></div></div>
+                    <div class="card"><i class="fas fa-rupee-sign"></i> <div class="card-info"><h3>Monthly Revenue</h3> <p id="dash-revenue">₹0</p></div></div>
+                    <div class="card"><i class="fas fa-wallet"></i> <div class="card-info"><h3>Total Expenses</h3> <p id="dash-expenses">₹0</p></div></div>
+                </div>
+                <div style="margin-top: 30px; background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <h3 style="color: var(--secondary-color); margin-bottom: 10px;">Welcome to RMP INTERIOR ERP System</h3>
+                    <p style="color: var(--text-muted);">Please select a module from the sidebar menu to manage your business operations.</p>
+                </div>
+            `;
+            break;
+            
+        case 'leads':
+            pageTitle.innerText = "Lead Management (CRM)";
+            content = `
+                <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>Lead Tracking</h3>
+                        <button style="background: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;"><i class="fas fa-plus"></i> Add New Lead</button>
+                    </div>
+                    <p style="color: var(--text-muted);">Lead Database structure is ready. UI implementation is in progress.</p>
+                </div>`;
+            break;
+            
+        case 'projects':
+            pageTitle.innerText = "Project Management";
+            content = `
+                <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <h3>Modular Kitchen & Interior Projects</h3>
+                    <p style="color: var(--text-muted); margin-top: 10px;">Manage timelines, milestones, and site tracking here.</p>
+                </div>`;
+            break;
+            
+        default:
+            // மற்ற அனைத்து மாட்யூல்களுக்கான பொதுவான தற்காலிகப் பக்கம்
+            let formattedName = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+            pageTitle.innerText = formattedName + " Management";
+            content = `
+                <div style="padding: 25px; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+                    <i class="fas fa-tools" style="font-size: 3rem; color: var(--border-color); margin-bottom: 15px;"></i>
+                    <h2 style="color: var(--text-main); margin-bottom: 10px;">${formattedName} Module</h2>
+                    <p style="color: var(--text-muted);">This module is currently being built. Database architecture is already connected.</p>
+                </div>`;
+    }
+
+    // HTML-ல் உள்ளிடுதல்
+    moduleContainer.innerHTML = content;
+    
+    // Dashboard லோட் ஆகும் போது Database-ல் இருந்து டேட்டாவை எடுத்தல்
+    if(moduleName === 'dashboard') {
+        updateDashboardData();
+    }
+}
+
+// Database-ல் இருந்து தகவல்களைப் பெறுவதற்கான Function
+async function updateDashboardData() {
+    try {
+        // நாம் Step 1-ல் உருவாக்கிய 'db' (RMPDatabase) மூலமாக டேட்டாவை எடுத்தல்
+        const leads = await db.getCollection('leads');
+        const projects = await db.getCollection('projects');
+        
+        document.getElementById('dash-leads').innerText = leads.length;
+        document.getElementById('dash-projects').innerText = projects.length;
+        // வருமானம் மற்றும் செலவுகளை இங்கு கால்குலேட் செய்யலாம்
+    } catch(err) {
+        console.log("Error loading dashboard data:", err);
+    }
+}
+
+// ஆப் திறக்கும் போது தானாகவே Dashboard-ஐ லோட் செய்ய
+window.onload = () => {
+    loadModule('dashboard');
+};
