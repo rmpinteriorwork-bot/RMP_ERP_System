@@ -1,1 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RMP INTERIOR - Business Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>RMP INTERIOR</h2>
+                <p class="tagline">Built with Vision. Designed with Care.</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" onclick="loadModule('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a href="#" class="nav-item" onclick="loadModule('leads')"><i class="fas fa-bullseye"></i> Leads (CRM)</a>
+                <a href="#" class="nav-item" onclick="loadModule('customers')"><i class="fas fa-users"></i> Customers</a>
+                <a href="#" class="nav-item" onclick="loadModule('quotations')"><i class="fas fa-file-invoice"></i> Quotations</a>
+                <a href="#" class="nav-item" onclick="loadModule('projects')"><i class="fas fa-project-diagram"></i> Projects</a>
+                <a href="#" class="nav-item" onclick="loadModule('siteProgress')"><i class="fas fa-camera"></i> Site Progress</a>
+                <a href="#" class="nav-item" onclick="loadModule('expenses')"><i class="fas fa-wallet"></i> Expenses</a>
+                <a href="#" class="nav-item" onclick="loadModule('finance')"><i class="fas fa-chart-pie"></i> Financials</a>
+                <a href="#" class="nav-item" onclick="loadModule('vendors')"><i class="fas fa-truck"></i> Vendors</a>
+                <a href="#" class="nav-item" onclick="loadModule('inventory')"><i class="fas fa-boxes"></i> Inventory</a>
+                <a href="#" class="nav-item" onclick="loadModule('employees')"><i class="fas fa-id-badge"></i> Employees</a>
+                <a href="#" class="nav-item" onclick="loadModule('documents')"><i class="fas fa-folder-open"></i> Documents</a>
+                <a href="#" class="nav-item" onclick="loadModule('reports')"><i class="fas fa-chart-bar"></i> Reports</a>
+                <a href="#" class="nav-item" onclick="loadModule('backup')"><i class="fas fa-database"></i> Backup & Restore</a>
+                <a href="#" class="nav-item" onclick="loadModule('settings')"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button id="mobileMenuBtn" class="menu-btn"><i class="fas fa-bars"></i></button>
+                    <h2 id="pageTitle">Executive Dashboard</h2>
+                </div>
+                <div class="topbar-right">
+                    <button class="theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
+                    <div class="user-profile">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Admin</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="module-container" id="moduleContainer">
+                <div class="dashboard-cards">
+                    <div class="card"><i class="fas fa-bullseye"></i> <h3>Total Leads</h3> <p id="dash-leads">0</p></div>
+                    <div class="card"><i class="fas fa-project-diagram"></i> <h3>Active Projects</h3> <p id="dash-projects">0</p></div>
+                    <div class="card"><i class="fas fa-rupee-sign"></i> <h3>Monthly Revenue</h3> <p id="dash-revenue">₹0</p></div>
+                    <div class="card"><i class="fas fa-wallet"></i> <h3>Total Expenses</h3> <p id="dash-expenses">₹0</p></div>
+                </div>
+                </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <script src="app.js"></script>
+</body>
+</html>
