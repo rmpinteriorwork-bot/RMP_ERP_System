@@ -62,3 +62,41 @@ async function updateDashboardData() {
 }
 
 window.onload = () => loadModule('dashboard');
+
+// [Projects Module - Logic]
+function loadProjectsModule() {
+    moduleContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Ongoing Projects</h3>
+            <button onclick="showProjectModal()" style="background:var(--accent-color); color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">+ Add Project</button>
+        </div>
+        <div id="projectsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px;"></div>
+        <div id="projectModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
+            <div style="background:var(--card-bg); padding:20px; border-radius:10px; width:400px;">
+                <h3>Add New Project</h3>
+                <input type="text" id="projName" placeholder="Project Name" style="width:100%; padding:10px; margin:10px 0;">
+                <input type="text" id="projClient" placeholder="Client Name" style="width:100%; padding:10px; margin:10px 0;">
+                <button onclick="saveProject()" style="background:var(--primary-color); color:white; padding:10px; border:none; width:100%;">Save</button>
+                <button onclick="closeProjectModal()" style="background:transparent; color:red; border:none; margin-top:10px; width:100%;">Cancel</button>
+            </div>
+        </div>`;
+    displayProjects();
+}
+
+function showProjectModal() { document.getElementById('projectModal').style.display = 'flex'; }
+function closeProjectModal() { document.getElementById('projectModal').style.display = 'none'; }
+async function saveProject() {
+    const name = document.getElementById('projName').value;
+    const client = document.getElementById('projClient').value;
+    await db.addRecord('projects', {name, client});
+    closeProjectModal();
+    displayProjects();
+}
+async function displayProjects() {
+    const projects = await db.getCollection('projects');
+    document.getElementById('projectsGrid').innerHTML = projects.map(p => `
+        <div style="background:var(--card-bg); padding:20px; border-radius:10px; border:1px solid var(--border-color);">
+            <h4>${p.name}</h4>
+            <p>Client: ${p.client}</p>
+        </div>`).join('');
+}
